@@ -1,0 +1,9 @@
+# Dependency Directories
+node_modules/
+# Local Environment Secret Vaults
+.env
+.env.local
+.env.production
+# Operating System Temporary Logs
+.DS_Store
+Thumbs.db
