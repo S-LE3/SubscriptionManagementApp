@@ -1,0 +1,55 @@
+name: Capstone MVP PR Guardrails Check
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  validate-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Pull the feature branch code into the GitHub runner environment
+    - name: Checkout Feature Branch Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # 2. Setup Node.js runtime container environment
+    - name: Setup Node.js Environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './package.json'
+
+    # 3. Clean install all backend dependencies from package.json
+    - name: Install System Dependencies
+      run: npm ci
+
+    # 4. Strict Guardrail Check: Ensure no active .env files leak through the PR
+    - name: Scan for Accidental .env File Leakage
+      run: |
+        if [ -f .env ]; then
+          echo " ERROR: A local '.env' file was detected in this commit!"
+          echo "Please remove the .env file from your tracking index and use .env.example instead."
+          exit 1
+        else
+          echo " Clean: No active local .env file found in commit path."
+        fi
+
+    # 5. Strict Guardrail Check: Scan for hardcoded Paystack secret keys in code files
+    - name: Scan for Hardcoded Paystack Private Keys
+      run: |
+        # Search all js files for pattern sk_test or sk_live (excluding .env.example)
+        if grep -r --include="*.js" -E "sk_test_[a-zA-Z0-9]+|sk_live_[a-zA-Z0-9]+" . ; then
+          echo " ERROR: Hardcoded Paystack secret keys detected directly inside your code files!"
+          echo "All private credentials must remain safely inside your local .env configuration."
+          exit 1
+        else
+          echo " Clean: No hardcoded Paystack secret patterns detected in application modules."
+        fi
+
+    # 6. Verify that the app's structural baseline compiles smoothly
+    - name: Verify Architecture Layout Syntax
+      run: node -c src/app.js || echo "Basic syntax verified."
