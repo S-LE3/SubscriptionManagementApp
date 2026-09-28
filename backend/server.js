@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable no-console */
 require('dotenv').config();
 const app = require('./src/app.js');
@@ -8,6 +9,8 @@ const PORT = process.env.PORT || 5000;
 // Placeholder function: Database connection will be called here
 const startServer = async () => {
   try {
+    await connectDatabase();
+
     app.listen(PORT, () => {
       console.log(`Capstone MVP Server running on port ${PORT}`);
     });
