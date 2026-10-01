@@ -13,7 +13,7 @@ app.use(
       }
     }
   })
-); // Captures the unmutated string buffer to verify Paystack signatures [paystack.com]
+); // Captures the unmutated string buffer to verify Paystack signatures
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1', billingRoutes);
 app.use('/api/v1/webhook', webhookRoutes);
