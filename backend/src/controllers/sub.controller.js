@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const Subscription = require('../models/Subscription');
-const axios = require('axios');
+const paystack = require('../config/paystack');
 
 // Initialize Checkout Redirection Session
 const initializeSubscription = async (req, res) => {
@@ -25,18 +25,7 @@ const initializeSubscription = async (req, res) => {
       }
     };
 
-    const paystackResponse = await axios.post(
-      'https://api.paystack.co/transaction/initialize',
-      paystackPayload,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      }
-    );
+    const paystackResponse = await paystack.post('/transaction/initialize', paystackPayload);
 
     // Save or update user tracking state as 'pending' in MongoDB
     await Subscription.findOneAndUpdate(
