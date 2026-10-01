@@ -3,7 +3,7 @@ const Subscription = require('../models/Subscription');
 
 const checkSubscription = async (req, res, next) => {
   try {
-    // Ensure the user is authenticated first (req.user must be populated by your auth middleware)
+    // Ensure the user is authenticated first (req.user must be populated by auth middleware)
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
