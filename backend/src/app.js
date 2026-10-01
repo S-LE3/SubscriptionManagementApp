@@ -2,6 +2,7 @@
 const express = require('express');
 const app = express();
 const billingRoutes = require('./routes/billing.routes');
+const webhookRoutes = require('./routes/webhook.routes');
 
 // Global Middlewares (Request Sanitization & Parsing)
 app.use(
@@ -15,6 +16,7 @@ app.use(
 ); // Captures the unmutated string buffer to verify Paystack signatures [paystack.com]
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1', billingRoutes);
+app.use('/api/v1/webhook', webhookRoutes);
 
 // Health Check Route (Verifies MVP API connectivity)
 app.get('/api/v1/health', (req, res) => {
