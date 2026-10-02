@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 const mongoose = require('mongoose');
 
 const SubscriptionSchema = new mongoose.Schema(
