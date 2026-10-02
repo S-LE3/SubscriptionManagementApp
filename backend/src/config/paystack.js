@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable prettier/prettier */
 const axios = require('axios');
 
 // Create a pre-configured, reusable secure Axios instance for Paystack [paystack.com]

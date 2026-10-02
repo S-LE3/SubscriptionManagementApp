@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable no-console */
 const crypto = require('crypto');
 const Subscription = require('../models/Subscription');
