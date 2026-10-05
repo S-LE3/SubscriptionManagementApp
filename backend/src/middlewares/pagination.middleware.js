@@ -58,8 +58,10 @@ const paginate = ({
         query = query.sort('-createdAt'); // Default sort order
       }
 
+      const skip = (page - 1) * limit;
+
       const [results, totalDocs] = await Promise.all([
-        query.limit(limit).lean(),
+        query.skip(skip).limit(limit).lean(),
         model.countDocuments(filterConditions)
       ]);
 
