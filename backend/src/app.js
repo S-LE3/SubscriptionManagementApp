@@ -7,9 +7,12 @@ const app = express();
 // Body Parser Middleware
 app.use(express.json());
 app.use(cors());
+ // TODO : Implement CORS ALLOWLIST, ALLOW FRONTEND WITH PORT 5173,5174, 3000, AS WELL AS THE OFFICIAL WEBSITE LIKE
+ // auth.com
+
 
 // Mount Team A Authentication Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // Base route test
 app.get('/', (req, res) => {

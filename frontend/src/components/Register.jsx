@@ -1,21 +1,47 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { validatePassword, validateEmail } from "../utils/validators";
+import { Eye, Bell,  LayoutDashboard, Lock, EyeOff} from "lucide-react";
 
 export default function Register() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "customer" });
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 1. Client-side email validation
+    const emailCheck = validateEmail(formData.email);
+    if (!emailCheck.isValid) {
+      setMessage({ type: "error", text: emailCheck.message });
+      return;
+    }
+
+    // 2. Client-side password validation
+    const passwordCheck = validatePassword(formData.password);
+    if (!passwordCheck.isValid) {
+      setMessage({ type: "error", text: passwordCheck.message });
+      return;
+    }
+
     setLoading(true);
     setMessage({ type: "", text: "" });
 
     try {
       const res = await API.post("/auth/register", formData);
-      localStorage.setItem("token", res.data.token);
+      
+      // Store JWT tokens safely in localStorage
+      if (res.data?.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+      if (res.data?.refreshToken) {
+        localStorage.setItem("refreshToken", res.data.refreshToken);
+      }
+
       setMessage({ type: "success", text: "Account created! Redirecting..." });
       setTimeout(() => navigate("/dashboard"), 1200);
     } catch (err) {
@@ -31,9 +57,11 @@ export default function Register() {
   return (
     <div style={styles.container}>
       <div style={styles.contentGrid}>
-        <div style={styles.heroSection}>
+        <section style={styles.heroSection} aria-label="Subscription tracker overview">
           <span style={styles.badge}>All-In-One Subscription Tracker</span>
+
           <h1 style={styles.heroTitle}>Take total control of your recurring payments</h1>
+
           <p style={styles.heroSubtitle}>
             Never miss a trial expiration, stop unwanted auto-renewals, and optimize your
             monthly budget effortlessly.
@@ -41,9 +69,9 @@ export default function Register() {
 
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>📊</div>
+              <div style={styles.featureIcon}><LayoutDashboard /></div>
               <div>
-                <h3 style={styles.featureHeading}>Centralized Dashboard</h3>
+                <h2 style={styles.featureHeading}>Centralized Dashboard</h2>
                 <p style={styles.featureDesc}>
                   Track Netflix, Spotify, AWS, and SaaS tools in one clean view.
                 </p>
@@ -51,9 +79,9 @@ export default function Register() {
             </div>
 
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>🔔</div>
+              <div style={styles.featureIcon}><Bell /></div>
               <div>
-                <h3 style={styles.featureHeading}>Smart Billing Alerts</h3>
+                <h2 style={styles.featureHeading}>Smart Billing Alerts</h2>
                 <p style={styles.featureDesc}>
                   Get timely notifications before payments hit your card.
                 </p>
@@ -61,16 +89,16 @@ export default function Register() {
             </div>
 
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>🔒</div>
+              <div style={styles.featureIcon}><Lock /></div>
               <div>
-                <h3 style={styles.featureHeading}>Secure Authentication</h3>
+                <h2 style={styles.featureHeading}>Secure Authentication</h2>
                 <p style={styles.featureDesc}>
                   JWT-protected sessions keep your subscription data safe.
                 </p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         <div style={styles.cardContainer}>
           <div style={styles.card}>
@@ -78,23 +106,18 @@ export default function Register() {
             <p style={styles.cardSubtitle}>Get started with SubTrack in less than a minute.</p>
 
             {message.text && (
-              <div
-                style={
-                  message.type === "success" ? styles.successAlert : styles.errorAlert
-                }
-              >
+              <div style={message.type === "success" ? styles.successAlert : styles.errorAlert}>
                 {message.text}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={styles.form}>
+            <form onSubmit={handleSubmit} style={styles.form} noValidate>
               <div style={styles.inputGroup}>
-                <label htmlFor="name" style={styles.label}>
-                  Full Name
-                </label>
+                <label htmlFor="name" style={styles.label}>Full Name</label>
                 <input
                   id="name"
                   type="text"
+                  name="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   style={styles.input}
@@ -103,12 +126,11 @@ export default function Register() {
               </div>
 
               <div style={styles.inputGroup}>
-                <label htmlFor="email" style={styles.label}>
-                  Email Address
-                </label>
+                <label htmlFor="email" style={styles.label}>Email Address</label>
                 <input
                   id="email"
                   type="email"
+                  name="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   style={styles.input}
@@ -117,17 +139,29 @@ export default function Register() {
               </div>
 
               <div style={styles.inputGroup}>
-                <label htmlFor="password" style={styles.label}>
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  style={styles.input}
-                  required
-                />
+                <label htmlFor="password" style={styles.label}>Password</label>
+                <div style={styles.passwordWrapper}>
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    style={styles.inputWithToggle}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={styles.toggleBtn}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
+                <small style={styles.passwordHint}>
+                  Must be 8+ chars with uppercase, lowercase, number & special symbol.
+                </small>
               </div>
 
               <button type="submit" style={styles.button} disabled={loading}>
@@ -210,6 +244,7 @@ border: "1px solid #334155",
 featureHeading: {
 color: "#f1f5f9",
 fontSize: "1rem",
+margin: 0,
 },
 featureDesc: {
 color: "#64748b",
@@ -262,6 +297,42 @@ fontSize: "0.95rem",
 outline: "none",
 color: "#0f172a",
 backgroundColor: "#f8fafc",
+width: "100%",
+boxSizing: "border-box",
+},
+passwordWrapper: {
+position: "relative",
+display: "flex",
+alignItems: "center",
+width: "100%",
+},
+inputWithToggle: {
+padding: "11px 40px 11px 14px",
+borderRadius: "8px",
+border: "1px solid #cbd5e1",
+fontSize: "0.95rem",
+outline: "none",
+color: "#0f172a",
+backgroundColor: "#f8fafc",
+width: "100%",
+boxSizing: "border-box",
+},
+toggleBtn: {
+position: "absolute",
+right: "10px",
+background: "none",
+border: "none",
+cursor: "pointer",
+fontSize: "1.1rem",
+padding: "4px",
+display: "flex",
+alignItems: "center",
+justifyContent: "center",
+},
+passwordHint: {
+fontSize: "0.75rem",
+color: "#64748b",
+marginTop: "2px",
 },
 button: {
 marginTop: "10px",

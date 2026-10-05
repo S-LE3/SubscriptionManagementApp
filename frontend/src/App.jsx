@@ -1,37 +1,35 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Register from "./components/Register";
 import Login from "./components/Login";
+import Logout from "./components/Logout";
 
 function NavigationHeader() {
-  const location = useLocation();
+  // Check if user is logged in by verifying token presence in localStorage
+  const isAuthenticated = !!(localStorage.getItem("token") || localStorage.getItem("accessToken"));
 
   return (
     <header style={styles.header}>
       <div style={styles.headerContainer}>
-        {/* Brand Logo */}
         <Link to="/" style={styles.brandLogo}>
           <span style={styles.logoIcon}>⚡</span>
           SubTrack
         </Link>
-
-        {/* Action Buttons */}
-        <div style={styles.navActions}>
-          <Link
-            to="/login"
-            style={{
-              ...styles.navBtn,
-              ...(location.pathname === "/login" ? styles.activeNavBtn : styles.outlineBtn),
-            }}
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            style={{ ...styles.navBtn, ...styles.primaryNavBtn }}
-          >
-            Get Started
-          </Link>
-        </div>
+        <nav style={styles.navActions}>
+          {isAuthenticated ? (
+            <Link to="/logout" style={{ ...styles.navBtn, ...styles.logoutNavBtn }}>
+              Sign Out
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" style={{ ...styles.navBtn, ...styles.outlineBtn }}>
+                Login
+              </Link>
+              <Link to="/register" style={{ ...styles.navBtn, ...styles.primaryNavBtn }}>
+                Get Started
+              </Link>
+            </>
+          )}
+        </nav>
       </div>
     </header>
   );
@@ -40,11 +38,14 @@ function NavigationHeader() {
 export default function App() {
   return (
     <Router>
-      <NavigationHeader />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+      <div style={styles.appWrapper}>
+        <NavigationHeader />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/logout" element={<Logout />} />
+        </Routes>
+      </div>
     </Router>
   );
 }
@@ -110,5 +111,10 @@ primaryNavBtn: {
 backgroundColor: "#2563eb",
 color: "#ffffff",
 boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+},
+logoutNavBtn: {
+backgroundColor: "#ef4444",
+color: "#ffffff",
+boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
 },
 };

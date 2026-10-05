@@ -1,15 +1,24 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const RefreshToken = require('../models/token');
 const { validateRegisterInput, validateLoginInput } = require('../utils/validation');
 
-// Helper to sign JWT tokens
-const generateToken = (user) => {
-  return jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET || 'fallback_secret_key',
-    { expiresIn: process.env.JWT_EXPIRE || '1d' }
+// Helper to generate JWT tokens
+const generateTokens = (userId) => {
+  const accessToken = jwt.sign(
+    { id: userId },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
   );
+
+  const refreshToken = jwt.sign(
+    { id: userId },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
+  );
+
+  return { accessToken, refreshToken };
 };
 
 // @desc    Register a new user
@@ -50,13 +59,24 @@ exports.register = async (req, res) => {
       role: role && ['admin', 'customer'].includes(role) ? role : 'customer'
     });
 
-    const token = generateToken(user);
+    // Generate tokens
+    const tokens = generateTokens(user._id);
+
+    // Save refresh token to MongoDB (7 days expiry)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await RefreshToken.create({
+      userId: user._id,
+      token: tokens.refreshToken,
+      expiresAt
+    });
 
     return res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
-        token,
+        tokens,
         user: {
           id: user._id,
           name: user.name,
@@ -74,7 +94,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user & return JWT token
+// @desc    Login user & return JWT tokens
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res) => {
@@ -91,7 +111,7 @@ exports.login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Check user exists (select password explicitly since select: false in schema)
+    // Check user exists
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -109,13 +129,24 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user);
+    // Generate tokens
+    const tokens = generateTokens(user._id);
+
+    // Save refresh token to MongoDB (7 days expiry)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await RefreshToken.create({
+      userId: user._id,
+      token: tokens.refreshToken,
+      expiresAt
+    });
 
     return res.status(200).json({
       success: true,
       message: 'Logged in successfully',
       data: {
-        token,
+        tokens,
         user: {
           id: user._id,
           name: user.name,
@@ -123,6 +154,30 @@ exports.login = async (req, res) => {
           role: user.role
         }
       }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Logout user & delete refresh token from DB
+// @route   POST /api/auth/logout
+// @access  Public / Private
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      await RefreshToken.findOneAndDelete({ token: refreshToken });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
     });
   } catch (error) {
     return res.status(500).json({

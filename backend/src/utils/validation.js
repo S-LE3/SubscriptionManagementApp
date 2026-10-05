@@ -10,8 +10,8 @@ const validateRegisterInput = (data = {}) => {
     errors.name = 'Name is required';
   } else if (name.trim().length < 2) {
     errors.name = 'Name must be at least 2 characters';
-  } else if (name.trim().length > 100) {
-    errors.name = 'Name must not exceed 100 characters';
+  } else if (name.trim().length > 40) {
+    errors.name = 'Name must not exceed 40 characters';
   }
 
   if (!email || typeof email !== 'string') {
@@ -24,8 +24,8 @@ const validateRegisterInput = (data = {}) => {
     errors.password = 'Password is required';
   } else if (password.length < 6) {
     errors.password = 'Password must be at least 6 characters';
-  } else if (password.length > 100) {
-    errors.password = 'Password must not exceed 100 characters';
+  } else if (password.length > 8) {
+    errors.password = 'Password must not exceed 8 characters';
   }
 
   if (role && !['admin', 'customer'].includes(role)) {

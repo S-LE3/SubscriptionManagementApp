@@ -4,6 +4,7 @@ import API from "../api/axios";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,7 +16,15 @@ export default function Login() {
 
     try {
       const res = await API.post("/auth/login", formData);
-      localStorage.setItem("token", res.data.token);
+
+      // Store JWT tokens safely in localStorage
+      if (res.data?.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+      if (res.data?.refreshToken) {
+        localStorage.setItem("refreshToken", res.data.refreshToken);
+      }
+
       setMessage({ type: "success", text: "Login successful! Redirecting..." });
       setTimeout(() => navigate("/dashboard"), 1200);
     } catch (err) {
@@ -42,11 +51,10 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>Email Address</label>
+            <label style={styles.label} htmlFor="email">Email Address</label>
             <input
               id="email"
               type="email"
-              name="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               style={styles.input}
@@ -55,16 +63,25 @@ export default function Login() {
           </div>
 
           <div style={styles.inputGroup}>
-            <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              style={styles.input}
-              required
-            />
+            <label style={styles.label} htmlFor="password">Password</label>
+            <div style={styles.passwordWrapper}>
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                style={styles.inputWithToggle}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.toggleBtn}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           <button type="submit" style={styles.button} disabled={loading}>
@@ -72,10 +89,9 @@ export default function Login() {
           </button>
         </form>
 
-        <p style={styles.footerText}>
-          Don&apos;t have an account?{" "}
-          <Link to="/register" style={styles.link}>Create an account</Link>
-        </p>
+        <div style={styles.footerText}>
+          Don't have an account? <Link to="/register" style={styles.link}>Create an account</Link>
+        </div>
       </div>
     </div>
   );
@@ -133,6 +149,37 @@ fontSize: "0.95rem",
 outline: "none",
 color: "#0f172a",
 backgroundColor: "#f8fafc",
+width: "100%",
+boxSizing: "border-box",
+},
+passwordWrapper: {
+position: "relative",
+display: "flex",
+alignItems: "center",
+width: "100%",
+},
+inputWithToggle: {
+padding: "11px 40px 11px 14px",
+borderRadius: "8px",
+border: "1px solid #cbd5e1",
+fontSize: "0.95rem",
+outline: "none",
+color: "#0f172a",
+backgroundColor: "#f8fafc",
+width: "100%",
+boxSizing: "border-box",
+},
+toggleBtn: {
+position: "absolute",
+right: "10px",
+background: "none",
+border: "none",
+cursor: "pointer",
+fontSize: "1.1rem",
+padding: "4px",
+display: "flex",
+alignItems: "center",
+justifyContent: "center",
 },
 button: {
 marginTop: "10px",
@@ -173,3 +220,4 @@ fontSize: "0.85rem",
 marginBottom: "16px",
 },
 };
+
