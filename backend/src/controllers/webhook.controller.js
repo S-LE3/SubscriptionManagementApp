@@ -2,6 +2,8 @@
 /* eslint-disable no-console */
 const crypto = require('crypto');
 const Subscription = require('../models/Subscription');
+const Invoice = require('../models/Invoice');
+const Token = require('../models/Token');
 
 const handlePaystackWebhook = async (req, res) => {
   try {
@@ -41,7 +43,7 @@ const handlePaystackWebhook = async (req, res) => {
       const userId = metadata?.user_id;
       const providerName = metadata?.provider_name || 'premium_tier';
       const customerCode = transactionData.customer?.customer_code || null;
-      const subscriptionCode = transactionData.plan || null;
+      const subscriptionCode = typeof transactionData.plan === 'string' ? transactionData.plan : '';
 
       if (!userId) {
         return console.error('Missing user metadata.');
@@ -61,6 +63,31 @@ const handlePaystackWebhook = async (req, res) => {
         },
         { upsert: true, returnDocument: 'after' }
       );
+ //Automatically spawn a verified invoice transaction record
+      await Invoice.create({
+        userId: userId,
+        providerName: providerName,
+        amount: transactionData.amount,
+        status: 'paid',
+        reference: transactionData.reference,
+        paidAt: new Date(transactionData.paid_at)
+      });
+
+      // Save recurring card authorization token if provided by Paystack
+      if (transactionData.authorization?.authorization_code) {
+        const auth = transactionData.authorization;
+        await Token.findOneAndUpdate(
+          { userId: userId, authCode: auth.authorization_code },
+          {
+            cardType: auth.card_type,
+            lastFour: auth.last4,
+            expMonth: auth.exp_month,
+            expYear: auth.exp_year,
+            customerEmail: transactionData.customer.email
+          },
+          { upsert: true }
+        );
+      }
 
       console.log(
         `Success: ${providerName} subscription activated for User ID: ${userId}`

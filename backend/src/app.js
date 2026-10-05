@@ -3,12 +3,14 @@ const express = require('express');
 const app = express();
 const billingRoutes = require('./routes/billing.routes');
 const webhookRoutes = require('./routes/webhook.routes');
+const financialRoutes = require('./routes/financial.routes');
 
 // Global Middlewares (Request Sanitization & Parsing)
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      if (req.originalUrl.includes('/webhook')) {
+      // if (req.originalUrl.includes('/webhook')) 
+        {
         req.rawBody = buf;
       }
     }
@@ -17,6 +19,7 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1', billingRoutes);
 app.use('/api/v1/webhook', webhookRoutes);
+app.use('/api/v1/financial', financialRoutes);
 
 // Health Check Route (Verifies MVP API connectivity)
 app.get('/api/v1/health', (req, res) => {

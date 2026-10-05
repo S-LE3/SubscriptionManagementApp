@@ -2,6 +2,8 @@
 /* eslint-disable no-console */
 const Subscription = require('../models/Subscription');
 const paystack = require('../config/paystack');
+const Plan = require('../models/Plan');
+const Coupon = require('../models/Coupon');
 
 // Initialize Checkout Redirection Session
 const initializeSubscription = async (req, res) => {
@@ -12,13 +14,32 @@ const initializeSubscription = async (req, res) => {
 
     const activeProvider = providerName || 'premium_tier';
 
-    // Hardcoded placeholder calculation for the MVP
-    const baseAmountUnits = 500000;
+    // Fetch dynamic pricing properties directly from Plan database
+    const targetPlan = await Plan.findOne({ paystackPlanCode: planCode ? planCode.trim() : '' });
+    
+    // Fallback default amount if a user makes a generic app initialization without a strict tier plan
+    let calculatedAmountUnits = targetPlan ? targetPlan.amount : 500000; 
+
+    // Check, validate, and subtract promotional code deductions
+    if (couponCode) {
+      const activeCoupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase(), isActive: true });
+      
+      if (activeCoupon && activeCoupon.expiryDate > new Date()) {
+        if (activeCoupon.discountType === 'percentage') {
+          calculatedAmountUnits = calculatedAmountUnits * (1 - activeCoupon.discountValue / 100);
+        } else if (activeCoupon.discountType === 'fixed') {
+          calculatedAmountUnits = Math.max(0, calculatedAmountUnits - activeCoupon.discountValue);
+        }
+        
+        // Track coupon consumption usage metrics safely
+        await Coupon.updateOne({ _id: activeCoupon._id }, { $inc: { usesCount: 1 } });
+      }
+    }
 
     const paystackPayload = {
       email: userEmail,
-      amount: baseAmountUnits,
-      plan: planCode || '', // It sends empty string if no planCode exists to bypass dashboard checks [paystack.com]
+      amount: Math.round(calculatedAmountUnits),
+      plan: planCode ? planCode.trim() || '' : '', // It sends empty string if no planCode exists to bypass dashboard checks [paystack.com]
       metadata: {
         user_id: userId.toString(),
         coupon_applied: couponCode || 'none',
@@ -30,10 +51,11 @@ const initializeSubscription = async (req, res) => {
 
     // Save or update user tracking state as 'pending' in MongoDB
     await Subscription.findOneAndUpdate(
-      { userId: userId, providerName: providerName || 'premium_tier' },
+      { userId: userId, providerName: activeProvider },
       {
         status: 'pending',
-        paystackSubscriptionCode: planCode
+        paystackSubscriptionCode: planCode,
+        transactionReference: paystackResponse.data.data.reference
       },
       { upsert: true, returnDocument: 'after' }
     );
@@ -73,23 +95,32 @@ const getSubscriptionStatus = async (req, res) => {
       });
     }
 
+    const activeProvider = providerName ? providerName.toLowerCase() : 'premium_tier';
+
     const subscription = await Subscription.findOne({
       userId: req.user._id,
-      providerName: providerName || 'premium_tier'
+      providerName: activeProvider
     });
 
     const isComplete = subscription && subscription.status === 'active';
 
-    // Returns the EXACT nested payload architecture required by frontend
+    // Choose a clear message payload based on whether the reference matches what is happening
+    const responseMessage = isComplete
+      ? 'Subscription is active.'
+      : subscription
+        ? `Subscription state is currently: ${subscription.status}.`
+        : 'Resource Error: No subscription record found for this reference.';
+
+      // Clean, single return matching the exact manual specifications
     return res.status(200).json({
       success: true,
-      message: 'Subscription status updated successfully.',
+      message: responseMessage,
       data: {
         transaction_reference: reference,
-        synchronization_complete: !!isComplete,
+        synchronization_complete: !!isComplete, // Safely evaluates dynamically
         user_account_state: {
-          subscription_status: subscription ? subscription.status : 'pending',
-          plan_tier: subscription ? 'premium' : 'none',
+          subscription_status: subscription ? subscription.status : 'none',
+          plan_tier: activeProvider, // Safely references declared variable
           access_entitlements_granted: !!isComplete
         }
       }
@@ -102,7 +133,7 @@ const getSubscriptionStatus = async (req, res) => {
       data: null
     });
   }
-};
+};   
 
 module.exports = {
   initializeSubscription,

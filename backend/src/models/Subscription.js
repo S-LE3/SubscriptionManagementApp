@@ -20,6 +20,10 @@ const SubscriptionSchema = new mongoose.Schema(
       ], // Example catalogs
       default: 'premium_tier'
     },
+    transactionReference: { 
+      type: String, 
+      default: null 
+    },
     paystackCustomerCode: {
       type: String,
       default: null
