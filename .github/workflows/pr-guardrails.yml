@@ -1,0 +1,72 @@
+name: Capstone MVP (Subscription Management App) PR Guardrails Check
+
+on:
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-scan:
+    runs-on: ubuntu-latest
+
+    # The Node.js project lives in backend/, not the repository root
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+    # 1. Pull the feature branch code into the GitHub runner environment
+    - name: Checkout Feature Branch Code
+      uses: actions/checkout@v4
+
+    # 2. Setup Node.js runtime with npm caching keyed on the backend lockfile
+    - name: Setup Node.js Environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    # 3. Clean install backend dependencies exactly as pinned in package-lock.json
+    - name: Install Backend Dependencies
+      run: npm ci
+
+    # 4. Strict Guardrail Check: Ensure no .env files are tracked anywhere in the repository
+    - name: Scan for Accidental .env File Leakage
+      working-directory: .
+      run: |
+        tracked_env_files=$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -vE '\.env\.example$' || true)
+        if [ -n "$tracked_env_files" ]; then
+          echo "ERROR: Tracked .env file(s) detected in this pull request:"
+          echo "$tracked_env_files"
+          echo "Remove them from the index (git rm --cached <file>) and use .env.example instead."
+          exit 1
+        fi
+        echo "Clean: No tracked .env files found."
+
+    # 5. Strict Guardrail Check: Scan tracked JS files for hardcoded Paystack secret keys.
+    #    Only file:line locations are printed so a leaked key is never echoed into the logs.
+    #    git grep only searches tracked files, so node_modules is never scanned.
+    - name: Scan for Hardcoded Paystack Private Keys
+      working-directory: .
+      run: |
+        matches=$(git grep -nE 'sk_(test|live)_[A-Za-z0-9]{20,}' -- '*.js' ':!**/node_modules/**' | cut -d: -f1,2 || true)
+        if [ -n "$matches" ]; then
+          echo "ERROR: Hardcoded Paystack secret key pattern detected at:"
+          echo "$matches"
+          echo "All private credentials must stay in your local .env file and be read via process.env."
+          exit 1
+        fi
+        echo "Clean: No hardcoded Paystack secret keys detected in application code."
+
+    # 6. Verify the core entry points parse without syntax errors
+    - name: Verify Entry Point Syntax
+      run: |
+        node --check src/app.js
+        node --check server.js
+
+    # 7. Run the automated backend test suite
+    - name: Run Automated Tests
+      run: npm test
