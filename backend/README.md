@@ -131,8 +131,7 @@ Bearer <token_string>)
 
 {
   "success": true,
-  "message": "Checkout redirection token session generated
-  successfully.",
+  "message": "Checkout session created successfully."
   "data": {
   "authorization_url": "https://paystack.com",
   "transaction_reference": "TX_8899001122_M"
@@ -148,7 +147,7 @@ Bearer <token_string>)
 
 {
   "success": true,
-  "message": "Polling synchronization verification status processed.",
+  "message": "Subscription status updated successfully.",
   "data": {
     "transaction_reference": "TX_8899001122_M",
     "synchronization_complete": true,
@@ -182,14 +181,15 @@ All sub-teams must use these unified application status error codes within their
 operational logic files:
 
 HTTP Status | Context Mapping Target | Return Message Payload Strategy:
-● 400 Bad Request | Form validation parameter failure or syntax violations |  "Validation Error: The structural formatting fields are incorrect."
+● 400 Bad Request | Form validation parameter failure or syntax violations |  "Validation Error: Missing or invalid request parameters."
 
 ● 401 Unauthorized | Session verification token string missing or expired | "Access Token is missing, corrupted, or has expired."
 
-● 403 Forbidden | Entitlement checker route guards lock access due to a past-due status | "Access Denied: Premium account entitlement privileges required."
+● 403 Forbidden | Entitlement checker route guards lock access due to a past-due status | "Access denied. An active subscription is required."
 
 ● 404 Not Found | Query database references fail to find records | "Resource Error: The targeted application identifier does not exist." 
 
-● 500 Server Error | Unexpected backend server issues or database connectivity down | "Internal Server Error: Execution encountered unexpected errors."
+● 500 Server Error | Unexpected backend server issues or database connectivity down | "Failed to initialize subscription checkout." OR "Error retrieving current subscription status."
+
 
 

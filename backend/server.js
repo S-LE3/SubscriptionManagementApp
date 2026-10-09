@@ -1,0 +1,23 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable no-console */
+require('dotenv').config();
+const app = require('./src/app.js');
+const connectDatabase = require('./src/config/database.js');
+
+const PORT = process.env.PORT || 5000;
+
+// Placeholder function: Database connection will be called here
+const startServer = async () => {
+  try {
+    await connectDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`Capstone MVP Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to initiate system bootstrapper:', error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
